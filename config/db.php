@@ -7,7 +7,7 @@ define('DB_USER', 'root');
 define('DB_PASS', 'root');
 define('DB_CHARSET', 'utf8mb4');
 
-define('APP_URL',        'http://localhost/rotary-attendance');
+// define('APP_URL',        'http://localhost/rotary-attendance');
 define('APP_URL',        'http://157.230.121.27/rotary-attendance');
 define('CERT_DIR',       __DIR__ . '/../certificates/');
 define('SMTP_HOST',      'smtp.gmail.com');
