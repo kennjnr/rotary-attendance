@@ -5,7 +5,7 @@ require_once 'config/db.php';
 
 $token = trim($_GET['token'] ?? '');
 
-$logoPath    = 'assets/images/logo.png';
+$logoPath    = 'assets/images/logowhite.png';
 $logoExists  = file_exists(__DIR__ . '/assets/images/logo.png');
 
 // ── Reusable styled error page function ─────────────────────────
