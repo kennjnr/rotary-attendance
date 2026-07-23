@@ -168,7 +168,7 @@ require_once '../includes/layout_top.php';
                     </label>
                 </div>
 
-                <div class="form-group full" style="border-top:1px solid #eee; padding-top:18px; margin-top:4px;">
+                <!-- <div class="form-group full" style="border-top:1px solid #eee; padding-top:18px; margin-top:4px;">
                     <label>
                         Admin Login Password
                         <span style="font-weight:400; color:#888;">
@@ -177,7 +177,7 @@ require_once '../includes/layout_top.php';
                     </label>
                     <input type="password" name="password"
                            placeholder="<?=  $isEdit ? 'Leave blank to keep unchanged' : 'Set password to enable admin login' ?>">
-                </div>
+                </div> -->
 
             </div><!-- /form-grid -->
 
