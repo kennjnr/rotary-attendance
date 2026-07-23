@@ -136,7 +136,7 @@ require_once '../includes/layout_top.php';
             <!-- QR Image -->
             <img src="<?= htmlspecialchars($qrWebPath) ?>"
                 alt="QR Code"
-                style="max-width:200px; width:100%; border:3px solid #003f87;
+                style="max-width:300px; width:100%; border:3px solid #003f87;
                         border-radius:10px; padding:6px;">
 
             <p style="font-size:0.78rem; color:#888; margin:10px 0;">
