@@ -53,12 +53,15 @@ class Mailer
     }
 
 
+
+
     private function buildEmailBody(string $name, array $meeting, string $certNo = ''): string
 {
     $date  = date('l, d F Y', strtotime($meeting['meeting_date']));
     $time  = date('h:i A',    strtotime($meeting['start_time']));
     $venue = htmlspecialchars($meeting['venue'] ?? 'Club Venue');
     $title = htmlspecialchars($meeting['title']);
+    $verifyUrl = APP_URL . '/certificate.php?no=' . urlencode($certNo ?? '');
 
     // ✅ Build BEFORE the heredoc — never inside it
     $verifyUrl = APP_URL . '/certificate.php?no=' . urlencode($certNo);
