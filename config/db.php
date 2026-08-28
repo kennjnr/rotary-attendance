@@ -13,7 +13,8 @@ define('CERT_DIR',       __DIR__ . '/../certificates/');
 define('SMTP_HOST',      'smtp.gmail.com');
 define('SMTP_PORT',      587);
 define('SMTP_USER',      'rcnbiupperhill@gmail.com');
-define('SMTP_PASS',      'jpam swbt sgxa wsub');
+// define('SMTP_PASS',      'jpam swbt sgxa wsub'); 
+define('SMTP_PASS',      'cvuq twfd mdfp lfvb');
 define('SMTP_FROM_NAME', 'Rotary Club Attendance');
 
 function getPDO(): PDO {
