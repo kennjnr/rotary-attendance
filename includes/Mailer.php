@@ -43,8 +43,7 @@ class Mailer
              $mail->isHTML(true);
              $mail->Subject = 'Your Attendance Certificate — ' .  $meeting['title'];
              $mail->Body    = $this->buildEmailBody($toName, $meeting, $certNo);
-             $mail->AltBody = 'Dear ' .  $toName . ', your certificate for '
-                        .  $meeting['title'] . ' is attached.';
+             $mail->AltBody = $this->buildEmailBodyPlain($toName, $meeting);
              $mail->send();
             return ['sent' => true, 'error' => null];
 
