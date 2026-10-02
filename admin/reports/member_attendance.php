@@ -29,8 +29,10 @@ $stmt   =  $pdo->prepare("
            COUNT(ma.id)                        AS meetings_attended,
            COUNT(cert.id)                      AS certs_received,
            MAX(ma.check_in_time)               AS last_attended,
-           ROUND(COUNT(ma.id) / GREATEST(?,1)
-                 * 100, 1)                     AS attendance_rate
+           (SELECT COUNT(*) FROM makeup_meetings mk
+             WHERE mk.member_id = m.id
+               AND mk.status = 'Approved'
+               AND mk.meeting_date BETWEEN ? AND ?) AS makeups
     FROM   members m
     LEFT   JOIN member_attendance ma
            ON  ma.member_id = m.id
@@ -38,10 +40,24 @@ $stmt   =  $pdo->prepare("
     LEFT   JOIN certificates cert ON cert.id = ma.certificate_id
     WHERE  m.is_active = 1  $where
     GROUP  BY m.id
-    ORDER  BY attendance_rate DESC, m.last_name
+    ORDER  BY m.last_name
 ");
-$stmt->execute([$totalMeetings,  $fromDate . ' 00:00:00',  $toDate . ' 23:59:59']);
+$stmt->execute([$fromDate, $toDate, $fromDate . ' 00:00:00', $toDate . ' 23:59:59']);
 $members =  $stmt->fetchAll();
+
+// Attendance rate = (meetings attended + approved make-ups) / meetings in period.
+// A make-up can only cover a missed meeting, so the rate never exceeds 100%.
+foreach ($members as &$row) {
+    $attended               = (int)$row['meetings_attended'];
+    $row['makeups']         = (int)$row['makeups'];
+    $row['makeups_credited']= min($row['makeups'], max($totalMeetings - $attended, 0));
+    $row['missed']          = max($totalMeetings - $attended - $row['makeups_credited'], 0);
+    $row['attendance_rate'] = $totalMeetings > 0
+        ? round(($attended + $row['makeups_credited']) / $totalMeetings * 100, 1)
+        : 0;
+}
+unset($row);
+usort($members, fn($a, $b) => [$b['attendance_rate'], $a['last_name']] <=> [$a['attendance_rate'], $b['last_name']]);
 
 // Roles for filter dropdown
 $roles =  $pdo->query("
@@ -132,6 +148,7 @@ require_once '../includes/layout_top.php';
             Period: <?= date('d M Y', strtotime($fromDate)) ?>
             — <?= date('d M Y', strtotime($toDate)) ?>
             | Total Meetings: <?=  $totalMeetings ?>
+            | Rate includes approved make-ups
         </span>
     </div>
     <div class="table-wrap">
@@ -143,6 +160,7 @@ require_once '../includes/layout_top.php';
                     <th>Role</th>
                     <th>Rotary ID</th>
                     <th>Attended</th>
+                    <th>Make-ups</th>
                     <th>Missed</th>
                     <th>Attendance Rate</th>
                     <th>Last Attended</th>
@@ -150,7 +168,7 @@ require_once '../includes/layout_top.php';
             </thead>
             <tbody>
             <?php foreach ($members as  $i =>  $m):
-                 $missed =  $totalMeetings -  $m['meetings_attended'];
+                 $missed = $m['missed'];
                  $rate   = (float)$m['attendance_rate'];
                  $rateColor =  $rate >= 80
                     ? '#009a44' : ($rate >= 50 ? '#f7a800' : '#c0392b');
@@ -170,6 +188,19 @@ require_once '../includes/layout_top.php';
                 <td>
                     <strong style="color:#003f87"><?=  $m['meetings_attended'] ?></strong>
                     / <?=  $totalMeetings ?>
+                </td>
+                <td>
+                    <?php if ($m['makeups'] > 0): ?>
+                        <a href="../makeups/index.php?status=Approved&q=<?= urlencode($m['last_name']) ?>"
+                           style="text-decoration:none"
+                           title="<?= $m['makeups'] > $m['makeups_credited']
+                                ? $m['makeups'] . ' approved; only ' . $m['makeups_credited'] . ' needed to cover missed meetings'
+                                : 'Approved make-ups in this period' ?>">
+                            <span class="badge badge-blue">+<?= $m['makeups_credited'] ?></span>
+                        </a>
+                    <?php else: ?>
+                        <span style="color:#999">0</span>
+                    <?php endif; ?>
                 </td>
                 <td>
                     <?php if ($missed > 0): ?>

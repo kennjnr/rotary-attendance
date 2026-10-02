@@ -30,6 +30,10 @@ if ($totalMeetings > 0) {
         SELECT m.id, m.first_name, m.last_name, m.email, m.phone, m.role,
                COUNT(ma.id)                  AS attended,
                ? - COUNT(ma.id)              AS missed,
+               (SELECT COUNT(*) FROM makeup_meetings mk
+                 WHERE mk.member_id = m.id
+                   AND mk.status = 'Approved'
+                   AND mk.meeting_date BETWEEN ? AND ?) AS makeups,
                GROUP_CONCAT(
                    CASE WHEN ma.id IS NULL
                         THEN mtg.meeting_date END
@@ -44,12 +48,20 @@ if ($totalMeetings > 0) {
         WHERE  m.is_active = 1
         AND    mtg.id IN ($placeholders)
         GROUP  BY m.id
-        HAVING missed >= ?
-        ORDER  BY missed DESC, m.last_name
+        HAVING (missed - LEAST(makeups, missed)) >= ?
+        ORDER  BY (missed - LEAST(makeups, missed)) DESC, m.last_name
     ");
-     $params = array_merge([$totalMeetings],  $meetingIds, [$minMissed]);
+     $params = array_merge([$totalMeetings, $fromDate, $toDate],  $meetingIds, [$minMissed]);
      $stmt->execute($params);
      $absentees =  $stmt->fetchAll();
+
+    // Approved make-ups cover missed meetings (never more than were missed)
+    foreach ($absentees as &$row) {
+        $row['makeups_credited'] = min((int)$row['makeups'], (int)$row['missed']);
+        $row['missed_physical']  = (int)$row['missed'];
+        $row['missed']           = (int)$row['missed'] - $row['makeups_credited'];
+    }
+    unset($row);
 }
 
 require_once '../includes/layout_top.php';
@@ -123,7 +135,7 @@ require_once '../includes/layout_top.php';
     <div class="card-header">
         <h2>🚫 Absentees (<?= count($absentees) ?>)</h2>
         <span style="font-size:0.82rem; color:#888;">
-            Missed <?=  $minMissed ?>+ meetings between
+            Missed <?=  $minMissed ?>+ meetings (after make-ups) between
             <?= date('d M Y', strtotime($fromDate)) ?> —
             <?= date('d M Y', strtotime($toDate)) ?>
         </span>
@@ -153,7 +165,7 @@ require_once '../includes/layout_top.php';
             <?php else: ?>
                 <?php foreach ($absentees as  $i =>  $a):
                      $rate =  $totalMeetings > 0
-                        ? round(($a['attended'] /  $totalMeetings) * 100, 1) : 0;
+                        ? round((($a['attended'] + $a['makeups_credited']) /  $totalMeetings) * 100, 1) : 0;
                      $rateColor =  $rate >= 80
                         ? '#009a44' : ($rate >= 50 ? '#f7a800' : '#c0392b');
                 ?>
@@ -173,7 +185,12 @@ require_once '../includes/layout_top.php';
                         </span>
                     </td>
                     <td><?= htmlspecialchars($a['phone'] ?? '—') ?></td>
-                    <td><?=  $a['attended'] ?> / <?=  $totalMeetings ?></td>
+                    <td>
+                        <?=  $a['attended'] ?> / <?=  $totalMeetings ?>
+                        <?php if ($a['makeups_credited'] > 0): ?>
+                            <br><span class="badge badge-blue" title="Approved make-ups in this period">+<?= $a['makeups_credited'] ?> make-up<?= $a['makeups_credited'] > 1 ? 's' : '' ?></span>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <span class="badge badge-red"><?=  $a['missed'] ?></span>
                     </td>
@@ -195,6 +212,11 @@ require_once '../includes/layout_top.php';
                         <?php
                          $dates = array_filter(
                             explode(', ',  $a['missed_dates'] ?? ''));
+                        if ($a['makeups_credited'] > 0): ?>
+                            <div style="font-size:0.75rem; color:#003f87; margin-bottom:3px;">
+                                <?= $a['makeups_credited'] ?> of these covered by make-ups
+                            </div>
+                        <?php endif;
                         foreach ($dates as  $d): ?>
                             <span class="badge badge-red"
                                   style="margin:2px; font-size:0.72rem;">
