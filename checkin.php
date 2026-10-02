@@ -329,6 +329,14 @@ $_SESSION['meeting']       = $meeting;
     <a href="checkin_guest.php"   class="btn btn-guest">
         🟢 I am a Guest
     </a>
+
+    <div style="margin-top:18px; padding-top:16px; border-top:1px solid #e9ecef;
+                font-size:0.88rem; color:#666;">
+        Attended a meeting at another club?<br>
+        <a href="makeup.php" style="color:#003f87; font-weight:600; text-decoration:none;">
+            🔁 Submit a make-up &amp; attach your certificate →
+        </a>
+    </div>
 </div>
 </body>
 </html>

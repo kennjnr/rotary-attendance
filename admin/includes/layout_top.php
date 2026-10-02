@@ -258,6 +258,10 @@ $adminBase   = str_repeat('../', substr_count(
            class="nav-item <?= ($currentPage === 'create.php' &&  $currentDir === 'meetings') ? 'active' : '' ?>">
             <span class="icon">➕</span> New Meeting
         </a>
+        <a href="<?=  $adminBase ?>admin/makeups/index.php"
+           class="nav-item <?= ($currentDir === 'makeups') ? 'active' : '' ?>">
+            <span class="icon">🔁</span> Makeup Meeting
+        </a>
     </nav>
 
     <nav class="nav-section">

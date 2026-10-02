@@ -27,7 +27,6 @@ $stmt   =  $pdo->prepare("
     SELECT m.id, m.first_name, m.last_name, m.email,
            m.role, m.rotary_id,
            COUNT(ma.id)                        AS meetings_attended,
-           SUM(ma.is_late)                     AS times_late,
            COUNT(cert.id)                      AS certs_received,
            MAX(ma.check_in_time)               AS last_attended,
            ROUND(COUNT(ma.id) / GREATEST(?,1)
@@ -145,7 +144,6 @@ require_once '../includes/layout_top.php';
                     <th>Rotary ID</th>
                     <th>Attended</th>
                     <th>Missed</th>
-                    <th>Times Late</th>
                     <th>Attendance Rate</th>
                     <th>Last Attended</th>
                 </tr>
@@ -178,13 +176,6 @@ require_once '../includes/layout_top.php';
                         <span class="badge badge-red"><?=  $missed ?></span>
                     <?php else: ?>
                         <span class="badge badge-green">0</span>
-                    <?php endif; ?>
-                </td>
-                <td>
-                    <?php if ($m['times_late'] > 0): ?>
-                        <span class="badge badge-gold"><?=  $m['times_late'] ?></span>
-                    <?php else: ?>
-                        <span style="color:#999">0</span>
                     <?php endif; ?>
                 </td>
                 <td>
