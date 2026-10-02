@@ -3,6 +3,7 @@
 
 require_once '../includes/auth.php';
 require_once '../../config/db.php';
+require_once '../includes/pagination.php';
 
 $pageTitle = 'Members';
 $pdo = getPDO();
@@ -16,6 +17,16 @@ if ($search) {
      $params = ["%$search%","%$search%","%$search%","%$search%"];
 }
 
+// Total count for pagination
+$countStmt = $pdo->prepare("
+    SELECT COUNT(*)
+    FROM   members m
+    JOIN   clubs c ON c.id = m.club_id
+     $where
+");
+$countStmt->execute($params);
+$pager = paginate((int)$countStmt->fetchColumn(), 10);
+
 $stmt =  $pdo->prepare("
     SELECT m.*, c.club_name,
            COUNT(ma.id) AS meetings_attended
@@ -25,6 +36,7 @@ $stmt =  $pdo->prepare("
      $where
     GROUP  BY m.id
     ORDER  BY m.last_name, m.first_name
+    LIMIT  {$pager['per_page']} OFFSET {$pager['offset']}
 ");
 $stmt->execute($params);
 $members =  $stmt->fetchAll();
@@ -33,7 +45,7 @@ $members =  $stmt->fetchAll();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_member'])) {
      $delId = (int)$_POST['member_id'];
      $pdo->prepare("UPDATE members SET is_active=0 WHERE id=?")->execute([$delId]);
-    header('Location: index.php'); exit;
+    header('Location: index.php' . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '')); exit;
 }
 
 require_once '../includes/layout_top.php';
@@ -53,7 +65,7 @@ require_once '../includes/layout_top.php';
 
 <div class="card">
     <div class="card-header">
-        <h2>👥 Members (<?= count($members) ?>)</h2>
+        <h2>👥 Members (<?= $pager['total'] ?>)</h2>
     </div>
     <div class="table-wrap">
         <table>
@@ -101,6 +113,7 @@ require_once '../includes/layout_top.php';
             </tbody>
         </table>
     </div>
+    <?= renderPagination($pager) ?>
 </div>
 
 <?php require_once '../includes/layout_bottom.php'; ?>

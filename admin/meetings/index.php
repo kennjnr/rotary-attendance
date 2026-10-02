@@ -3,6 +3,7 @@
 
 require_once '../includes/auth.php';
 require_once '../../config/db.php';
+require_once '../includes/pagination.php';
 
 $pageTitle = 'All Meetings';
 $pdo = getPDO();
@@ -10,6 +11,10 @@ $pdo = getPDO();
 // Status filter
 $statusFilter = $_GET['status'] ?? '';
 $where = $statusFilter ? "WHERE m.status = " . $pdo->quote($statusFilter) : '';
+
+// Total count for pagination
+$totalMeetings = (int)$pdo->query("SELECT COUNT(*) FROM meetings m JOIN clubs c ON c.id = m.club_id $where")->fetchColumn();
+$pager = paginate($totalMeetings, 10);
 
 $meetings = $pdo->query("
     SELECT m.*, c.club_name,
@@ -22,6 +27,7 @@ $meetings = $pdo->query("
     LEFT   JOIN meeting_summary ms ON ms.meeting_id = m.id
     $where
     ORDER  BY m.meeting_date DESC, m.start_time DESC
+    LIMIT  {$pager['per_page']} OFFSET {$pager['offset']}
 ")->fetchAll();
 
 // Handle quick status toggle
@@ -33,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_status'])) {
         $pdo->prepare("UPDATE meetings SET status=? WHERE id=?")
             ->execute([$newStatus, $meetingId]);
     }
-    header('Location: index.php'); exit;
+    header('Location: index.php' . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '')); exit;
 }
 
 require_once '../includes/layout_top.php';
@@ -53,7 +59,7 @@ require_once '../includes/layout_top.php';
 
 <div class="card">
     <div class="card-header">
-        <h2>📅 Meetings (<?= count($meetings) ?>)</h2>
+        <h2>📅 Meetings (<?= $pager['total'] ?>)</h2>
     </div>
     <div class="table-wrap">
         <table>
@@ -184,6 +190,7 @@ require_once '../includes/layout_top.php';
             </tbody>
         </table>
     </div>
+    <?= renderPagination($pager) ?>
 </div>
 
 <!-- ══════════════════════════════════════
