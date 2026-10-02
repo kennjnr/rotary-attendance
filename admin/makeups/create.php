@@ -35,10 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $file = null;
     if (empty($errors)) {
-        $file = storeMakeupUpload('attachment', $errors);
-        if (!$file && empty($errors)) {
-            $errors[] = 'Please attach the certificate or notice of attendance.';
-        }
+        $file = storeMakeupUpload('attachment', $errors);   // optional
     }
 
     if (empty($errors)) {
@@ -52,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([
             $data['member_id'], $data['meeting_date'], $data['club_visited'],
             $data['district'] ?: null, $data['meeting_type'], $data['venue'] ?: null, $data['notes'] ?: null,
-            $file['path'], $file['name'], $file['mime'],
+            $file['path'] ?? null, $file['name'] ?? null, $file['mime'] ?? null,
             $status,
             $status === 'Approved' ? $_SESSION['admin_id'] : null,
             $status === 'Approved' ? date('Y-m-d H:i:s') : null,

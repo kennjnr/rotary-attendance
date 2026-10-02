@@ -75,10 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $file = null;
     if (empty($errors)) {
-        $file = storeMakeupUpload('attachment', $errors);
-        if (!$file && empty($errors)) {
-            $errors[] = 'Please attach your certificate or notice of attendance.';
-        }
+        $file = storeMakeupUpload('attachment', $errors);   // optional
     }
 
     if (empty($errors)) {
@@ -90,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ")->execute([
             $member['id'], $data['meeting_date'], $data['club_visited'],
             $data['district'] ?: null, $data['meeting_type'], $data['venue'] ?: null, $data['notes'] ?: null,
-            $file['path'], $file['name'], $file['mime'],
+            $file['path'] ?? null, $file['name'] ?? null, $file['mime'] ?? null,
         ]);
 
         $recent[] = time();
@@ -202,8 +199,9 @@ if (!empty($_GET['done']) && !empty($_SESSION['makeup_done'])) {
     <?php else: ?>
 
         <p class="intro">
-            Choose your name, confirm the email the club has on file for you, and attach the
-            certificate or notice of attendance from the club you visited.
+            Choose your name, confirm the email the club has on file for you, and tell us about
+            the meeting. If the club you visited gave you a certificate or notice of attendance,
+            attach it too.
         </p>
 
         <?php if ($errors): ?>
@@ -273,10 +271,10 @@ if (!empty($_GET['done']) && !empty($_SESSION['makeup_done'])) {
                 </div>
 
                 <div class="field full">
-                    <label>Certificate / Notice of Attendance <span class="req">*</span></label>
-                    <input type="file" name="attachment" required
+                    <label>Certificate / Notice of Attendance <small>(optional)</small></label>
+                    <input type="file" name="attachment"
                            accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*">
-                    <small>PDF or photo (JPG, PNG, WEBP), max 5 MB. A clear phone photo is fine.</small>
+                    <small>If you received one: PDF or photo (JPG, PNG, WEBP), max 5 MB. A clear phone photo is fine.</small>
                 </div>
 
                 <div class="field full">

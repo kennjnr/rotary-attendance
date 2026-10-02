@@ -67,8 +67,7 @@
 
         <div class="form-group full">
             <label>
-                Certificate / Notice of Attendance
-                <?php if (!$isEdit): ?><span class="req">*</span><?php endif; ?>
+                Certificate / Notice of Attendance <small class="text-muted">(optional)</small>
             </label>
             <?php if ($isEdit && !empty($record['attachment_path'])): ?>
                 <div style="font-size:0.85rem; margin-bottom:4px;">
@@ -81,7 +80,6 @@
             <?php endif; ?>
             <input type="file" name="attachment"
                    accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*"
-                   <?= $isEdit ? '' : 'required' ?>
                    style="padding:9px; border:1.5px dashed var(--border); border-radius:8px; background:#fafbfc;">
             <small class="text-muted">PDF, JPG, PNG or WEBP — max 5 MB.</small>
         </div>
