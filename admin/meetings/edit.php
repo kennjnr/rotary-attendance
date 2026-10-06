@@ -4,6 +4,7 @@
 require_once '../includes/auth.php';
 require_once '../../config/db.php';
 require_once '../../includes/QRGenerator.php';
+require_once '../../includes/MeetingPoster.php';
 
 $pageTitle = 'Edit Meeting';
 $pdo       = getPDO();
@@ -49,6 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$startTime)                       $errors[] = 'Start time is required.';
     if (!in_array($status,  $allowedStatuses))  $errors[] = 'Invalid status selected.';
 
+    // Optional poster: replace if a new file was chosen, or remove if ticked
+    $newPoster = empty($errors) ? MeetingPoster::store('poster', $errors) : null;
+
     if (empty($errors)) {
 
         // Recalculate QR expiry based on new date/time and expiry hours
@@ -78,6 +82,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              $expiresAt,
              $id,
         ]);
+
+        if ($newPoster) {
+             $pdo->prepare("UPDATE meetings SET poster_path = ? WHERE id = ?")->execute([$newPoster,  $id]);
+            MeetingPoster::delete($meeting['poster_path'] ?? null);
+        } elseif (!empty($_POST['remove_poster']) && !empty($meeting['poster_path'])) {
+             $pdo->prepare("UPDATE meetings SET poster_path = NULL WHERE id = ?")->execute([$id]);
+            MeetingPoster::delete($meeting['poster_path']);
+        }
 
          $success = true;
 
@@ -144,7 +156,8 @@ require_once '../includes/layout_top.php';
             <span class="badge <?=  $badge ?>"><?=  $meeting['status'] ?></span>
         </div>
         <div class="card-body">
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="MAX_FILE_SIZE" value="<?= MeetingPoster::MAX_BYTES ?>">
 
                 <div class="form-grid">
 
@@ -225,6 +238,32 @@ require_once '../includes/layout_top.php';
                         <textarea name="theme"
                                   placeholder="e.g. Vocational Service in the 21st Century"
                         ><?= htmlspecialchars($meeting['theme'] ?? '') ?></textarea>
+                    </div>
+
+                        <div class="form-group full">
+                        <label>Meeting / Fellowship Poster <small class="text-muted">(optional)</small></label>
+                        <?php if (!empty($meeting['poster_path'])): ?>
+                            <div style="display:flex; gap:14px; align-items:flex-start; margin-bottom:6px;">
+                                <a href="<?= htmlspecialchars(MeetingPoster::url($meeting['poster_path'])) ?>" target="_blank">
+                                    <img src="<?= htmlspecialchars(MeetingPoster::url($meeting['poster_path'])) ?>"
+                                         alt="Current poster"
+                                         style="max-width:140px; border-radius:8px; border:1px solid var(--border);">
+                                </a>
+                                <div style="font-size:0.85rem;">
+                                    Current poster.<br>
+                                    <span class="text-muted">Choose a new file below to replace it.</span><br>
+                                    <label style="font-weight:normal; display:inline-flex; gap:6px; align-items:center; margin-top:8px; color:var(--red);">
+                                        <input type="checkbox" name="remove_poster" value="1"> Remove poster
+                                    </label>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                        <input type="file" name="poster" accept="image/jpeg,image/png,image/webp"
+                           onchange="previewPoster(this)"
+                           style="padding:9px; border:1.5px dashed var(--border); border-radius:8px; background:#fafbfc;">
+                        <small class="text-muted">JPG, PNG or WEBP, max 5 MB. Shown on the meeting page and the check-in page.</small>
+                        <img id="poster_preview" alt="Poster preview"
+                         style="display:none; max-width:220px; margin-top:8px; border-radius:8px; border:1px solid var(--border);">
                     </div>
 
                 </div><!-- /form-grid -->
@@ -449,6 +488,19 @@ function copyCheckinUrl() {
         btn.textContent = '✅ Copied!';
         setTimeout(() => { btn.textContent = '📋 Copy'; }, 2500);
     });
+}
+</script>
+
+
+<script>
+function previewPoster(input) {
+    const img = document.getElementById('poster_preview');
+    if (input.files && input.files[0]) {
+        img.src = URL.createObjectURL(input.files[0]);
+        img.style.display = 'block';
+    } else {
+        img.style.display = 'none';
+    }
 }
 </script>
 

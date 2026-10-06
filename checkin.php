@@ -2,6 +2,7 @@
 // checkin.php  ← QR code URL: https://yourdomain.com/checkin.php?token=XXXX
 
 require_once 'config/db.php';
+require_once 'includes/MeetingPoster.php';
 
 $token = trim($_GET['token'] ?? '');
 
@@ -305,6 +306,15 @@ $_SESSION['meeting']       = $meeting;
     <?php endif; ?>
 
     <div class="subtitle">Club Attendance Check-In</div>
+
+    <?php if (!empty($meeting['poster_path'])): ?>
+        <a href="<?= htmlspecialchars(MeetingPoster::url($meeting['poster_path'])) ?>" target="_blank">
+            <img src="<?= htmlspecialchars(MeetingPoster::url($meeting['poster_path'])) ?>"
+                 alt="Meeting poster"
+                 style="width:100%; max-height:460px; object-fit:contain; border-radius:10px;
+                        margin-bottom:16px; background:#f7f9fc;">
+        </a>
+    <?php endif; ?>
 
     <div class="meeting-info">
         <h3><?= htmlspecialchars($meeting['title']) ?></h3>

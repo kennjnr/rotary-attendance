@@ -1,0 +1,9 @@
+# Posters are public images. Never execute scripts from this folder.
+<FilesMatch "\.(php|phtml|phar|pl|py|cgi|sh)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Deny from all
+    </IfModule>
+</FilesMatch>

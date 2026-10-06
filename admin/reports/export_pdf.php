@@ -6,6 +6,21 @@ require_once '../../config/db.php';
 require_once '../../includes/ReportGenerator.php';
 require_once '../../vendor/autoload.php';
 
+// FPDF's built-in fonts use Windows-1252, but our data is UTF-8.
+// Convert every cell's text so names like Bw’Omondi or José print correctly.
+class RotaryPDF extends FPDF
+{
+    public function Cell($w, $h = 0, $txt = '', $border = 0, $ln = 0, $align = '', $fill = false, $link = '')
+    {
+        $txt = (string)$txt;
+        if ($txt !== '' && preg_match('//u', $txt)) {
+            $converted = @iconv('UTF-8', 'windows-1252//TRANSLIT', $txt);
+            if ($converted !== false) $txt = $converted;
+        }
+        parent::Cell($w, $h, $txt, $border, $ln, $align, $fill, $link);
+    }
+}
+
 $pdo      = getPDO();
 $reporter = new ReportGenerator($pdo);
 
@@ -42,7 +57,7 @@ function outputSingleMeetingPDF(array  $data): void
     //  $meeting,  $summary,  $members,  $visitors,  $guests,
     //  $certStats,  $visitingByClub
 
-     $pdf = new FPDF('P', 'mm', 'A4');
+     $pdf = new RotaryPDF('P', 'mm', 'A4');
      $pdf->SetAutoPageBreak(true, 18);
      $pdf->SetMargins(14, 14, 14);
 
@@ -56,28 +71,25 @@ function outputSingleMeetingPDF(array  $data): void
      $pdf->Ln(6);
      $boxes = [
         ['Members Present',     $summary['total_members_present']    ?? 0, [0,63,135]],
-        ['Late Arrivals',       $summary['total_late_members']       ?? 0, [192,57,43]],
         ['Visiting Rotarians',  $summary['total_visiting_rotarians'] ?? 0, [247,168,0]],
         ['Guests',              $summary['total_guests']             ?? 0, [0,154,68]],
         ['Total Attendees',     $summary['total_attendees']          ?? 0, [0,63,135]],
         ['Certs Sent',          $certStats['total_sent']             ?? 0, [0,154,68]],
     ];
 
-     $boxW = (210 - 28) / 3;
-     $col  = 0;
+     $boxW   = (210 - 28) / 3;
+     $col    = 0;
+     $startY =  $pdf->GetY();
     foreach ($boxes as  $box) {
         [$label,  $val,  $color] =  $box;
          $x = 14 + ($col % 3) *  $boxW;
-         $y =  $pdf->GetY();
-        if ($col % 3 === 0 &&  $col > 0)  $y += 22;
-        if ($col % 3 === 0 &&  $col > 0)  $pdf->SetY($y);
+         $y =  $startY + intdiv($col, 3) * 22;
 
-         $pdf->SetXY($x,  $pdf->GetY());
          $pdf->SetFillColor(...$color);
          $pdf->SetDrawColor(255, 255, 255);
-         $pdf->Rect($x,  $pdf->GetY(),  $boxW - 2, 20, 'F');
+         $pdf->Rect($x,  $y,  $boxW - 2, 20, 'F');
 
-         $pdf->SetXY($x,  $pdf->GetY() + 3);
+         $pdf->SetXY($x,  $y + 3);
          $pdf->SetFont('Arial', 'B', 14);
          $pdf->SetTextColor(255, 255, 255);
          $pdf->Cell($boxW - 2, 7, (string)$val, 0, 0, 'C');
@@ -87,12 +99,9 @@ function outputSingleMeetingPDF(array  $data): void
          $pdf->Cell($boxW - 2, 5, strtoupper($label), 0, 0, 'C');
 
          $col++;
-        if ($col % 3 === 0) {
-             $pdf->Ln(22);
-        }
     }
 
-     $pdf->Ln(26);
+     $pdf->SetY($startY + (int)ceil(count($boxes) / 3) * 22 + 4);
 
     // Certificate stats block
      $pdf->SetTextColor(0, 0, 0);
@@ -139,12 +148,11 @@ function outputSingleMeetingPDF(array  $data): void
          $pdf->Ln(4);
          $cols = [
             ['#',           8,  'C'],
-            ['Name',        46, 'L'],
+            ['Name',        52, 'L'],
             ['Role',        28, 'L'],
             ['Rotary ID',   24, 'C'],
             ['Check-In',    20, 'C'],
-            ['Status',      18, 'C'],
-            ['Cert No',     28, 'C'],
+            ['Cert No',     36, 'C'],
             ['Email Sent',  14, 'C'],
         ];
         pdfTableHeader($pdf,  $cols);
@@ -157,17 +165,16 @@ function outputSingleMeetingPDF(array  $data): void
 
              $fill =  $i % 2 !== 0;
              $pdf->Cell(8,  6,  $i + 1, 0, 0, 'C',  $fill);
-             $pdf->Cell(46, 6,
-                substr($row['first_name'].' '.$row['last_name'], 0, 28),
+             $pdf->Cell(52, 6,
+                substr($row['first_name'].' '.$row['last_name'], 0, 31),
                 0, 0, 'L',  $fill);
              $pdf->Cell(28, 6, substr($row['role'], 0, 16),          0, 0, 'L',  $fill);
-             $pdf->Cell(24, 6,  $row['rotary_id'] ?? '—',             0, 0, 'C',  $fill);
+             $pdf->Cell(24, 6,  $row['rotary_id'] ?? '-',             0, 0, 'C',  $fill);
              $pdf->Cell(20, 6,
                 date('h:i A', strtotime($row['check_in_time'])),
                 0, 0, 'C',  $fill);
-             $pdf->Cell(18, 6,  $row['is_late'] ? 'Late' : 'On Time', 0, 0, 'C',  $fill);
-             $pdf->Cell(28, 6,
-                substr($row['certificate_no'] ?? '—', 0, 16),
+             $pdf->Cell(36, 6,
+                substr($row['certificate_no'] ?? '-', 0, 22),
                 0, 0, 'C',  $fill);
              $pdf->Cell(14, 6,  $row['email_sent'] ? 'Yes' : 'No',    0, 1, 'C',  $fill);
         }
@@ -182,12 +189,11 @@ function outputSingleMeetingPDF(array  $data): void
          $cols = [
             ['#',         6,  'C'],
             ['Name',      36, 'L'],
-            ['Home Club', 44, 'L'],
+            ['Home Club', 38, 'L'],
             ['District',  18, 'C'],
             ['Role',      22, 'L'],
-            ['Email',     40, 'L'],
+            ['Email',     44, 'L'],
             ['Check-In',  18, 'C'],
-            ['Late?',     12, 'C'],
         ];
         pdfTableHeader($pdf,  $cols);
 
@@ -200,20 +206,19 @@ function outputSingleMeetingPDF(array  $data): void
              $pdf->Cell(36, 6,
                 substr($row['first_name'].' '.$row['last_name'], 0, 24),
                 0, 0, 'L',  $fill);
-             $pdf->Cell(44, 6,
-                substr($row['home_club_name'], 0, 28),
+             $pdf->Cell(38, 6,
+                substr($row['home_club_name'], 0, 24),
                 0, 0, 'L',  $fill);
-             $pdf->Cell(18, 6,  $row['district']     ?? '—', 0, 0, 'C',  $fill);
+             $pdf->Cell(18, 6,  $row['district']     ?? '-', 0, 0, 'C',  $fill);
              $pdf->Cell(22, 6,
-                substr($row['role_in_club'] ?? '—', 0, 14),
+                substr($row['role_in_club'] ?? '-', 0, 14),
                 0, 0, 'L',  $fill);
-             $pdf->Cell(40, 6,
-                substr($row['email'], 0, 26),
+             $pdf->Cell(44, 6,
+                substr($row['email'], 0, 30),
                 0, 0, 'L',  $fill);
              $pdf->Cell(18, 6,
                 date('h:i A', strtotime($row['check_in_time'])),
-                0, 0, 'C',  $fill);
-             $pdf->Cell(12, 6,  $row['is_late'] ? 'Late' : 'OK', 0, 1, 'C',  $fill);
+                0, 1, 'C',  $fill);
         }
     }
 
@@ -230,7 +235,6 @@ function outputSingleMeetingPDF(array  $data): void
             ['Email',       42, 'L'],
             ['Invited By',  30, 'L'],
             ['Check-In',    18, 'C'],
-            ['Late?',       12, 'C'],
             ['Cert Sent',   14, 'C'],
         ];
         pdfTableHeader($pdf,  $cols);
@@ -245,19 +249,18 @@ function outputSingleMeetingPDF(array  $data): void
                 substr($row['first_name'].' '.$row['last_name'], 0, 24),
                 0, 0, 'L',  $fill);
              $pdf->Cell(36, 6,
-                substr($row['organization'] ?? '—', 0, 22),
+                substr($row['organization'] ?? '-', 0, 22),
                 0, 0, 'L',  $fill);
              $pdf->Cell(42, 6,
                 substr($row['email'], 0, 28),
                 0, 0, 'L',  $fill);
              $host = ($row['host_first'] ?? false)
                 ?  $row['host_first'].' '.$row['host_last']
-                : '—';
+                : '-';
              $pdf->Cell(30, 6, substr($host, 0, 18),  0, 0, 'L',  $fill);
              $pdf->Cell(18, 6,
                 date('h:i A', strtotime($row['check_in_time'])),
                 0, 0, 'C',  $fill);
-             $pdf->Cell(12, 6,  $row['is_late'] ? 'Late' : 'OK', 0, 0, 'C',  $fill);
              $pdf->Cell(14, 6,  $row['email_sent'] ? 'Yes' : 'No', 0, 1, 'C',  $fill);
         }
     }
@@ -272,7 +275,7 @@ function outputSingleMeetingPDF(array  $data): void
 // ════════════════════════════════════════════════════════════════
 function outputAllMeetingsPDF(array  $meetings, array  $agg, array  $filters): void
 {
-     $pdf = new FPDF('L', 'mm', 'A4');
+     $pdf = new RotaryPDF('L', 'mm', 'A4');
      $pdf->SetAutoPageBreak(true, 18);
      $pdf->SetMargins(12, 12, 12);
      $pdf->AddPage();
@@ -281,7 +284,7 @@ function outputAllMeetingsPDF(array  $meetings, array  $agg, array  $filters): v
      $pdf->SetFillColor(0, 63, 135);
      $pdf->SetTextColor(255, 255, 255);
      $pdf->SetFont('Arial', 'B', 14);
-     $pdf->Cell(0, 10, 'ROTARY CLUB — ALL MEETINGS SUMMARY REPORT', 0, 1, 'C', true);
+     $pdf->Cell(0, 10, 'ROTARY CLUB - ALL MEETINGS SUMMARY REPORT', 0, 1, 'C', true);
      $pdf->SetFont('Arial', '', 8);
 
      $range = '';
@@ -331,12 +334,11 @@ function outputAllMeetingsPDF(array  $meetings, array  $agg, array  $filters): v
      $pdf->SetTextColor(0, 0, 0);
      $cols = [
         ['#',         6,  'C'],
-        ['Meeting',   60, 'L'],
+        ['Meeting',   72, 'L'],
         ['Date',      22, 'C'],
         ['Venue',     36, 'L'],
         ['Status',    18, 'C'],
         ['Members',   16, 'C'],
-        ['Late',      12, 'C'],
         ['Visitors',  16, 'C'],
         ['Guests',    14, 'C'],
         ['Total',     14, 'C'],
@@ -355,14 +357,13 @@ function outputAllMeetingsPDF(array  $meetings, array  $agg, array  $filters): v
          $pdf->SetTextColor(40, 40, 40);
 
          $pdf->Cell(6,  6,  $i + 1, 0, 0, 'C',  $fill);
-         $pdf->Cell(60, 6, substr($m['title'], 0, 38),  0, 0, 'L',  $fill);
+         $pdf->Cell(72, 6, substr($m['title'], 0, 46),  0, 0, 'L',  $fill);
          $pdf->Cell(22, 6,
             date('d M Y', strtotime($m['meeting_date'])),
             0, 0, 'C',  $fill);
-         $pdf->Cell(36, 6, substr($m['venue'] ?? '—', 0, 22), 0, 0, 'L',  $fill);
+         $pdf->Cell(36, 6, substr($m['venue'] ?? '-', 0, 22), 0, 0, 'L',  $fill);
          $pdf->Cell(18, 6,  $m['status'],      0, 0, 'C',  $fill);
          $pdf->Cell(16, 6,  $m['members'],     0, 0, 'C',  $fill);
-         $pdf->Cell(12, 6,  $m['late'],        0, 0, 'C',  $fill);
          $pdf->Cell(16, 6,  $m['visitors'],    0, 0, 'C',  $fill);
          $pdf->Cell(14, 6,  $m['guests'],      0, 0, 'C',  $fill);
          $pdf->Cell(14, 6,  $m['total'],       0, 0, 'C',  $fill);
@@ -374,12 +375,11 @@ function outputAllMeetingsPDF(array  $meetings, array  $agg, array  $filters): v
      $pdf->SetFillColor(0, 63, 135);
      $pdf->SetTextColor(255, 255, 255);
      $pdf->Cell(6,  7, '',  0, 0, 'C', true);
-     $pdf->Cell(60, 7, 'TOTALS', 0, 0, 'L', true);
+     $pdf->Cell(72, 7, 'TOTALS', 0, 0, 'L', true);
      $pdf->Cell(22, 7, '',  0, 0, 'C', true);
      $pdf->Cell(36, 7, '',  0, 0, 'L', true);
      $pdf->Cell(18, 7, count($meetings) . ' mtgs', 0, 0, 'C', true);
      $pdf->Cell(16, 7, array_sum(array_column($meetings,'members')),  0, 0, 'C', true);
-     $pdf->Cell(12, 7, array_sum(array_column($meetings,'late')),     0, 0, 'C', true);
      $pdf->Cell(16, 7, array_sum(array_column($meetings,'visitors')), 0, 0, 'C', true);
      $pdf->Cell(14, 7, array_sum(array_column($meetings,'guests')),   0, 0, 'C', true);
      $pdf->Cell(14, 7, array_sum(array_column($meetings,'total')),    0, 0, 'C', true);
@@ -411,7 +411,7 @@ function pdfHeaderBand(FPDF  $pdf, array  $meeting, string  $section = ''): void
      $pdf->SetFont('Arial', 'B', 13);
      $pdf->SetXY(0, 2);
      $pdf->Cell(210, 8,
-        'ROTARY CLUB — MEETING ATTENDANCE REPORT',
+        'ROTARY CLUB - MEETING ATTENDANCE REPORT',
         0, 1, 'C');
 
      $pdf->SetFont('Arial', '', 8);

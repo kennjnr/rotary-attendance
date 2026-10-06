@@ -4,6 +4,7 @@
 require_once '../includes/auth.php';
 require_once '../../config/db.php';
 require_once '../../includes/QRGenerator.php';
+require_once '../../includes/MeetingPoster.php';
 
 $id = (int)($_GET['id'] ?? 0);
 if (!$id) { header('Location: index.php'); exit; }
@@ -66,14 +67,10 @@ require_once '../includes/layout_top.php';
 
 <!-- Summary Stats -->
 <?php if ($summary): ?>
-<div class="stats-grid" style="grid-template-columns:repeat(5,1fr);">
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
     <div class="stat-card">
         <div class="val"><?=  $summary['total_members_present'] ?></div>
         <div class="lbl">Members</div>
-    </div>
-    <div class="stat-card gold">
-        <div class="val"><?=  $summary['total_late_members'] ?></div>
-        <div class="lbl">Late Arrivals</div>
     </div>
     <div class="stat-card">
         <div class="val"><?=  $summary['total_visiting_rotarians'] ?></div>
@@ -125,6 +122,27 @@ require_once '../includes/layout_top.php';
                             : 'No expiry' ?>
                     </td></tr>
             </table>
+
+            <?php if (!empty($meeting['poster_path'])):
+                 $posterUrl = MeetingPoster::url($meeting['poster_path']); ?>
+                <div style="margin-top:16px; padding-top:14px; border-top:1px solid var(--border);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <strong style="color:var(--blue); font-size:0.9rem;">🖼️ Poster</strong>
+                        <div class="actions">
+                            <a href="<?= htmlspecialchars($posterUrl) ?>" target="_blank" class="btn btn-outline btn-sm">↗ Open</a>
+                            <a href="<?= htmlspecialchars($posterUrl) ?>" download class="btn btn-gold btn-sm">⬇️ Download</a>
+                        </div>
+                    </div>
+                    <a href="<?= htmlspecialchars($posterUrl) ?>" target="_blank">
+                        <img src="<?= htmlspecialchars($posterUrl) ?>" alt="Meeting poster"
+                             style="max-width:100%; max-height:420px; border-radius:8px; border:1px solid var(--border);">
+                    </a>
+                </div>
+            <?php else: ?>
+                <p style="margin-top:12px; font-size:0.85rem;" class="text-muted">
+                    No poster. <a href="edit.php?id=<?=  $id ?>">Add one</a>
+                </p>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -271,12 +289,12 @@ require_once '../includes/layout_top.php';
         <table>
             <thead>
                 <tr><th>Name</th><th>Rotary ID</th><th>Role</th>
-                    <th>Check-In Time</th><th>Late?</th>
+                    <th>Check-In Time</th>
                     <th>Certificate</th><th>Email Sent</th></tr>
             </thead>
             <tbody>
             <?php if (empty($memberAttendance)): ?>
-                <tr><td colspan="7" style="text-align:center;color:#999;padding:20px">No members checked in yet.</td></tr>
+                <tr><td colspan="6" style="text-align:center;color:#999;padding:20px">No members checked in yet.</td></tr>
             <?php else: ?>
                 <?php foreach ($memberAttendance as  $a): ?>
                 <tr>
@@ -284,7 +302,6 @@ require_once '../includes/layout_top.php';
                     <td><?= htmlspecialchars($a['rotary_id'] ?? '—') ?></td>
                     <td><?= htmlspecialchars($a['role']) ?></td>
                     <td><?= date('h:i A', strtotime($a['check_in_time'])) ?></td>
-                    <td><?=  $a['is_late'] ? '<span class="badge badge-red">Late</span>' : '<span class="badge badge-green">On Time</span>' ?></td>
                     <td><?= htmlspecialchars($a['certificate_no'] ?? '—') ?></td>
                     <td><?=  $a['email_sent'] ? '✅' : '⏳' ?></td>
                 </tr>
@@ -304,11 +321,11 @@ require_once '../includes/layout_top.php';
         <table>
             <thead>
                 <tr><th>Name</th><th>Home Club</th><th>District</th><th>Role</th>
-                    <th>Email</th><th>Check-In</th><th>Late?</th><th>Cert Sent</th></tr>
+                    <th>Email</th><th>Check-In</th><th>Cert Sent</th></tr>
             </thead>
             <tbody>
             <?php if (empty($visitors)): ?>
-                <tr><td colspan="8" style="text-align:center;color:#999;padding:20px">No visiting Rotarians.</td></tr>
+                <tr><td colspan="7" style="text-align:center;color:#999;padding:20px">No visiting Rotarians.</td></tr>
             <?php else: ?>
                 <?php foreach ($visitors as  $v): ?>
                 <tr>
@@ -318,7 +335,6 @@ require_once '../includes/layout_top.php';
                     <td><?= htmlspecialchars($v['role_in_club'] ?? '—') ?></td>
                     <td><?= htmlspecialchars($v['email']) ?></td>
                     <td><?= date('h:i A', strtotime($v['check_in_time'])) ?></td>
-                    <td><?=  $v['is_late'] ? '<span class="badge badge-red">Late</span>' : '<span class="badge badge-green">On Time</span>' ?></td>
                     <td><?=  $v['email_sent'] ? '✅' : '⏳' ?></td>
                 </tr>
                 <?php endforeach; ?>
@@ -337,11 +353,11 @@ require_once '../includes/layout_top.php';
         <table>
             <thead>
                 <tr><th>Name</th><th>Organization</th><th>Email</th>
-                    <th>Invited By</th><th>Check-In</th><th>Late?</th><th>Cert Sent</th></tr>
+                    <th>Invited By</th><th>Check-In</th><th>Cert Sent</th></tr>
             </thead>
             <tbody>
             <?php if (empty($guests)): ?>
-                <tr><td colspan="7" style="text-align:center;color:#999;padding:20px">No guests.</td></tr>
+                <tr><td colspan="6" style="text-align:center;color:#999;padding:20px">No guests.</td></tr>
             <?php else: ?>
                 <?php foreach ($guests as  $g): ?>
                 <tr>
@@ -350,7 +366,6 @@ require_once '../includes/layout_top.php';
                     <td><?= htmlspecialchars($g['email']) ?></td>
                     <td><?=  $g['host_first'] ? htmlspecialchars($g['host_first'].' '.$g['host_last']) : '—' ?></td>
                     <td><?= date('h:i A', strtotime($g['check_in_time'])) ?></td>
-                    <td><?=  $g['is_late'] ? '<span class="badge badge-red">Late</span>' : '<span class="badge badge-green">On Time</span>' ?></td>
                     <td><?=  $g['email_sent'] ? '✅' : '⏳' ?></td>
                 </tr>
                 <?php endforeach; ?>

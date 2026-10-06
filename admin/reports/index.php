@@ -96,7 +96,6 @@ require_once '../includes/layout_top.php';
                     <th>Date</th>
                     <th>Status</th>
                     <th>Members</th>
-                    <th>Late</th>
                     <th>Visitors</th>
                     <th>Guests</th>
                     <th>Total</th>
@@ -107,7 +106,7 @@ require_once '../includes/layout_top.php';
             <tbody>
             <?php if (empty($meetings)): ?>
                 <tr>
-                    <td colspan="11"
+                    <td colspan="10"
                         style="text-align:center; color:#999; padding:40px;">
                         No meetings found for the selected filters.
                     </td>
@@ -140,13 +139,6 @@ require_once '../includes/layout_top.php';
                         <span class="badge <?=  $badge ?>"><?=  $m['status'] ?></span>
                     </td>
                     <td><?=  $m['members'] ?></td>
-                    <td>
-                        <?php if ($m['late'] > 0): ?>
-                            <span class="badge badge-red"><?=  $m['late'] ?></span>
-                        <?php else: ?>
-                            <span style="color:#999">0</span>
-                        <?php endif; ?>
-                    </td>
                     <td><?=  $m['visitors'] ?></td>
                     <td><?=  $m['guests'] ?></td>
                     <td>
@@ -185,7 +177,6 @@ require_once '../includes/layout_top.php';
                         TOTALS (<?= count($meetings) ?> meetings)
                     </td>
                     <td><?= array_sum(array_column($meetings,'members')) ?></td>
-                    <td><?= array_sum(array_column($meetings,'late')) ?></td>
                     <td><?= array_sum(array_column($meetings,'visitors')) ?></td>
                     <td><?= array_sum(array_column($meetings,'guests')) ?></td>
                     <td><?= array_sum(array_column($meetings,'total')) ?></td>

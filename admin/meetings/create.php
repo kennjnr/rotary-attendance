@@ -4,6 +4,7 @@
 require_once '../includes/auth.php';
 require_once '../../config/db.php';
 require_once '../../includes/QRGenerator.php';
+require_once '../../includes/MeetingPoster.php';
 
 $pageTitle = 'Create Meeting';
 $pdo    = getPDO();
@@ -28,6 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$startTime)    $errors[] = 'Start time is required.';
     if (!$hostClub)     $errors[] = 'No host club found. Please set up the host club first.';
 
+    // Optional poster (only saved once everything else is valid)
+    $poster = empty($errors) ? MeetingPoster::store('poster', $errors) : null;
+
     if (empty($errors)) {
         // Generate unique QR token
          $token     = bin2hex(random_bytes(16));
@@ -37,12 +41,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
          $stmt =  $pdo->prepare("
             INSERT INTO meetings
                 (club_id, title, meeting_date, start_time, end_time,
-                 venue, theme, qr_token, qr_expires_at, status, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Scheduled', ?)
+                 venue, theme, poster_path, qr_token, qr_expires_at, status, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Scheduled', ?)
         ");
          $stmt->execute([
              $hostClub['id'],  $title,  $meetingDate,  $startTime,
              $endTime ?: null,  $venue ?: null,  $theme ?: null,
+             $poster,
              $token,  $expiresAt,  $_SESSION['admin_id'],
         ]);
          $meetingId = (int)$pdo->lastInsertId();
@@ -89,6 +94,12 @@ require_once '../includes/layout_top.php';
                 <tr><td style="color:#888">QR Expires</td>
                     <td><?= date('d M Y, h:i A', strtotime($newMeeting['qr_expires_at'])) ?></td></tr>
             </table>
+
+            <?php if (!empty($newMeeting['poster_path'])): ?>
+                <img src="<?= htmlspecialchars(MeetingPoster::url($newMeeting['poster_path'])) ?>"
+                     alt="Meeting poster"
+                     style="max-width:100%; max-height:320px; margin-top:14px; border-radius:8px; border:1px solid #dee2e6;">
+            <?php endif; ?>
 
             <div style="margin-top:18px; padding:12px; background:#f0f4f8;
                         border-radius:8px; word-break:break-all; font-size:0.82rem;">
@@ -209,7 +220,8 @@ require_once '../includes/layout_top.php';
         <a href="index.php" class="btn btn-outline btn-sm">← Back</a>
     </div>
     <div class="card-body">
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="MAX_FILE_SIZE" value="<?= MeetingPoster::MAX_BYTES ?>">
             <div class="form-grid">
 
                 <div class="form-group full">
@@ -263,6 +275,16 @@ require_once '../includes/layout_top.php';
                     ><?= htmlspecialchars($_POST['theme'] ?? '') ?></textarea>
                 </div>
 
+                <div class="form-group full">
+                    <label>Meeting / Fellowship Poster <small class="text-muted">(optional)</small></label>
+                    <input type="file" name="poster" accept="image/jpeg,image/png,image/webp"
+                           onchange="previewPoster(this)"
+                           style="padding:9px; border:1.5px dashed var(--border); border-radius:8px; background:#fafbfc;">
+                    <small class="text-muted">JPG, PNG or WEBP, max 5 MB. Shown on the meeting page and the check-in page.</small>
+                    <img id="poster_preview" alt="Poster preview"
+                         style="display:none; max-width:220px; margin-top:8px; border-radius:8px; border:1px solid var(--border);">
+                </div>
+
             </div><!-- /form-grid -->
 
             <div style="margin-top:24px; display:flex; gap:12px;">
@@ -276,5 +298,17 @@ require_once '../includes/layout_top.php';
 </div>
 
 <?php endif; ?>
+
+<script>
+function previewPoster(input) {
+    const img = document.getElementById('poster_preview');
+    if (input.files && input.files[0]) {
+        img.src = URL.createObjectURL(input.files[0]);
+        img.style.display = 'block';
+    } else {
+        img.style.display = 'none';
+    }
+}
+</script>
 
 <?php require_once '../includes/layout_bottom.php'; ?>

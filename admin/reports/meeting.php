@@ -74,14 +74,10 @@ require_once '../includes/layout_top.php';
 
 <!-- Summary Stats -->
 <div class="stats-grid"
-     style="grid-template-columns:repeat(6,1fr); margin-bottom:28px;">
+     style="grid-template-columns:repeat(5,1fr); margin-bottom:28px;">
     <div class="stat-card">
         <div class="val"><?=  $summary['total_members_present'] ?? 0 ?></div>
         <div class="lbl">Members Present</div>
-    </div>
-    <div class="stat-card red">
-        <div class="val"><?=  $summary['total_late_members'] ?? 0 ?></div>
-        <div class="lbl">Late Arrivals</div>
     </div>
     <div class="stat-card gold">
         <div class="val"><?=  $summary['total_visiting_rotarians'] ?? 0 ?></div>
@@ -220,7 +216,6 @@ require_once '../includes/layout_top.php';
                     <th>Email</th>
                     <th>Phone</th>
                     <th>Check-In</th>
-                    <th>Status</th>
                     <th>Certificate No</th>
                     <th>Email Sent</th>
                 </tr>
@@ -228,7 +223,7 @@ require_once '../includes/layout_top.php';
             <tbody>
             <?php if (empty($members)): ?>
                 <tr>
-                    <td colspan="10"
+                    <td colspan="9"
                         style="text-align:center; color:#999; padding:24px;">
                         No members checked in.
                     </td>
@@ -247,11 +242,6 @@ require_once '../includes/layout_top.php';
                     <td><?= htmlspecialchars($row['email']) ?></td>
                     <td><?= htmlspecialchars($row['phone'] ?? '—') ?></td>
                     <td><?= date('h:i A', strtotime($row['check_in_time'])) ?></td>
-                    <td>
-                        <?=  $row['is_late']
-                            ? '<span class="badge badge-red">Late</span>'
-                            : '<span class="badge badge-green">On Time</span>' ?>
-                    </td>
                     <td style="font-size:0.82rem; color:#555;">
                         <?= htmlspecialchars($row['certificate_no'] ?? '—') ?>
                     </td>
@@ -287,7 +277,6 @@ require_once '../includes/layout_top.php';
                     <th>Email</th>
                     <th>Phone</th>
                     <th>Check-In</th>
-                    <th>Status</th>
                     <th>Cert No</th>
                     <th>Email Sent</th>
                 </tr>
@@ -295,7 +284,7 @@ require_once '../includes/layout_top.php';
             <tbody>
             <?php if (empty($visitors)): ?>
                 <tr>
-                    <td colspan="11"
+                    <td colspan="10"
                         style="text-align:center; color:#999; padding:24px;">
                         No visiting Rotarians.
                     </td>
@@ -315,11 +304,6 @@ require_once '../includes/layout_top.php';
                     <td><?= htmlspecialchars($row['email']) ?></td>
                     <td><?= htmlspecialchars($row['phone'] ?? '—') ?></td>
                     <td><?= date('h:i A', strtotime($row['check_in_time'])) ?></td>
-                    <td>
-                        <?=  $row['is_late']
-                            ? '<span class="badge badge-red">Late</span>'
-                            : '<span class="badge badge-green">On Time</span>' ?>
-                    </td>
                     <td style="font-size:0.82rem; color:#555;">
                         <?= htmlspecialchars($row['certificate_no'] ?? '—') ?>
                     </td>
@@ -352,7 +336,6 @@ require_once '../includes/layout_top.php';
                     <th>Phone</th>
                     <th>Invited By</th>
                     <th>Check-In</th>
-                    <th>Status</th>
                     <th>Cert No</th>
                     <th>Email Sent</th>
                 </tr>
@@ -360,7 +343,7 @@ require_once '../includes/layout_top.php';
             <tbody>
             <?php if (empty($guests)): ?>
                 <tr>
-                    <td colspan="10"
+                    <td colspan="9"
                         style="text-align:center; color:#999; padding:24px;">
                         No guests.
                     </td>
@@ -383,11 +366,6 @@ require_once '../includes/layout_top.php';
                             : '—' ?>
                     </td>
                     <td><?= date('h:i A', strtotime($row['check_in_time'])) ?></td>
-                    <td>
-                        <?=  $row['is_late']
-                            ? '<span class="badge badge-red">Late</span>'
-                            : '<span class="badge badge-green">On Time</span>' ?>
-                    </td>
                     <td style="font-size:0.82rem; color:#555;">
                         <?= htmlspecialchars($row['certificate_no'] ?? '—') ?>
                     </td>

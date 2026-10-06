@@ -1,0 +1,5 @@
+# Uploaded posters are created by the app on each server; do not commit them.
+*
+!.gitignore
+!.htaccess
+!index.html

@@ -95,7 +95,6 @@ function outputSingleMeetingCSV(array  $data): void
     csvSectionTitle($out, 'Attendance Summary');
     csvRow($out, ['Category', 'Count']);
     csvRow($out, ['Club Members Present',     $summary['total_members_present']    ?? 0]);
-    csvRow($out, ['Late Arrivals',            $summary['total_late_members']       ?? 0]);
     csvRow($out, ['Visiting Rotarians',       $summary['total_visiting_rotarians'] ?? 0]);
     csvRow($out, ['Guests',                   $summary['total_guests']             ?? 0]);
     csvRow($out, ['Total Attendees',          $summary['total_attendees']          ?? 0]);
@@ -112,7 +111,7 @@ function outputSingleMeetingCSV(array  $data): void
     csvSectionTitle($out, 'Club Members Attendance');
     csvRow($out, [
         'No.', 'First Name', 'Last Name', 'Role', 'Rotary ID',
-        'Email', 'Phone', 'Check-In Time', 'Arrival Status',
+        'Email', 'Phone', 'Check-In Time',
         'Certificate No', 'Email Sent', 'Email Sent At',
     ]);
     foreach ($members as  $i =>  $row) {
@@ -125,7 +124,6 @@ function outputSingleMeetingCSV(array  $data): void
              $row['email'],
              $row['phone'] ?? '',
             date('h:i A', strtotime($row['check_in_time'])),
-             $row['is_late'] ? 'Late' : 'On Time',
              $row['certificate_no'] ?? '',
              $row['email_sent'] ? 'Yes' : 'No',
              $row['email_sent_at']
@@ -140,7 +138,7 @@ function outputSingleMeetingCSV(array  $data): void
     csvRow($out, [
         'No.', 'First Name', 'Last Name', 'Home Club', 'District',
         'Role in Club', 'Rotary ID', 'Email', 'Phone',
-        'Check-In Time', 'Arrival Status',
+        'Check-In Time',
         'Certificate No', 'Email Sent', 'Email Sent At',
     ]);
     foreach ($visitors as  $i =>  $row) {
@@ -155,7 +153,6 @@ function outputSingleMeetingCSV(array  $data): void
              $row['email'],
              $row['phone'] ?? '',
             date('h:i A', strtotime($row['check_in_time'])),
-             $row['is_late'] ? 'Late' : 'On Time',
              $row['certificate_no'] ?? '',
              $row['email_sent'] ? 'Yes' : 'No',
              $row['email_sent_at']
@@ -170,7 +167,7 @@ function outputSingleMeetingCSV(array  $data): void
     csvRow($out, [
         'No.', 'First Name', 'Last Name', 'Organization',
         'Email', 'Phone', 'Invited By',
-        'Check-In Time', 'Arrival Status',
+        'Check-In Time',
         'Certificate No', 'Email Sent', 'Email Sent At',
     ]);
     foreach ($guests as  $i =>  $row) {
@@ -186,7 +183,6 @@ function outputSingleMeetingCSV(array  $data): void
              $row['phone'] ?? '',
              $host,
             date('h:i A', strtotime($row['check_in_time'])),
-             $row['is_late'] ? 'Late' : 'On Time',
              $row['certificate_no'] ?? '',
              $row['email_sent'] ? 'Yes' : 'No',
              $row['email_sent_at']
@@ -233,7 +229,7 @@ function outputAllMeetingsCSV(array  $meetings, array  $agg): void
     csvSectionTitle($out, 'All Meetings Detail');
     csvRow($out, [
         'No.', 'Meeting Title', 'Date', 'Start Time', 'Venue',
-        'Status', 'Members Present', 'Late Arrivals',
+        'Status', 'Members Present',
         'Visiting Rotarians', 'Guests', 'Total Attendees',
         'Certificates Sent',
     ]);
@@ -247,7 +243,6 @@ function outputAllMeetingsCSV(array  $meetings, array  $agg): void
              $m['venue'] ?? '',
              $m['status'],
              $m['members'],
-             $m['late'],
              $m['visitors'],
              $m['guests'],
              $m['total'],
@@ -259,7 +254,6 @@ function outputAllMeetingsCSV(array  $meetings, array  $agg): void
     csvRow($out, [
         '', 'TOTALS', '', '', '', '',
         array_sum(array_column($meetings, 'members')),
-        array_sum(array_column($meetings, 'late')),
         array_sum(array_column($meetings, 'visitors')),
         array_sum(array_column($meetings, 'guests')),
         array_sum(array_column($meetings, 'total')),
