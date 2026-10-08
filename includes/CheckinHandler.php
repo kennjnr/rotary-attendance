@@ -317,7 +317,12 @@ class CheckinHandler
 
     private function fetchMeeting(int  $id): ?array
     {
-         $stmt =  $this->pdo->prepare("SELECT * FROM meetings WHERE id = ?");
+         $stmt =  $this->pdo->prepare("
+            SELECT m.*, c.club_name
+            FROM   meetings m
+            JOIN   clubs c ON c.id = m.club_id
+            WHERE  m.id = ?
+        ");
          $stmt->execute([$id]);
         return  $stmt->fetch() ?: null;
     }
